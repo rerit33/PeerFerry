@@ -28,7 +28,7 @@ public sealed class TorrentService : IAsyncDisposable
             CacheDirectory = Path.Combine(store.Root, "cache", settings.GroupId),
             ListenEndPoints = new Dictionary<string, IPEndPoint> { ["ipv4"] = new(IPAddress.Loopback, LocalPort) },
             MaximumConnections = 100, MaximumHalfOpenConnections = 12,
-            MaximumDownloadRate = settings.DownloadLimitKiB * 1024, MaximumUploadRate = settings.UploadLimitKiB * 1024,
+            MaximumDownloadRate = 0, MaximumUploadRate = 0, // Aggregate limits are enforced by the TLS gateway from the first byte.
             AllowedEncryption = [EncryptionType.PlainText], // TLS is provided by the authenticated outer transport.
         };
         // Defence in depth: the engine can only dial the loopback proxies created by our gateway.

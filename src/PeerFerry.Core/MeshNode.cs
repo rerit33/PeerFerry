@@ -28,6 +28,8 @@ public sealed class MeshNode : IAsyncDisposable
     private readonly SemaphoreSlim rebindLock = new(1);
     private readonly SemaphoreSlim refreshLock = new(1);
     private readonly bool enableDiscovery;
+    private readonly BandwidthLimiter upload;
+    private readonly BandwidthLimiter download;
     private readonly List<TcpListener> listeners = [];
     private CancellationTokenSource network = new();
     private Task? maintenance;
@@ -45,6 +47,7 @@ public sealed class MeshNode : IAsyncDisposable
     public MeshNode(StateStore store, AppSettings settings, Func<IReadOnlyList<NetworkBinding>>? bindingProvider = null, bool enableDiscovery = true)
     {
         this.store = store; Settings = settings; identity = new Identity(store.Root); this.enableDiscovery = enableDiscovery;
+        upload = new(settings.UploadLimitKiB); download = new(settings.DownloadLimitKiB);
         this.bindingProvider = bindingProvider ?? (() => NetworkAdapters.Select(settings, NetworkAdapters.Enumerate()));
         Torrents = new TorrentService(store, settings);
         Torrents.Notice += message => Notice?.Invoke(message);
@@ -169,7 +172,7 @@ public sealed class MeshNode : IAsyncDisposable
                             await local.ConnectAsync(IPAddress.Loopback, Torrents.LocalPort, deadline.Token);
                             await Wire.WriteAsync(ssl, new Response(true), deadline.Token);
                             deadline.CancelAfter(Timeout.InfiniteTimeSpan);
-                            await Wire.BridgeAsync(ssl, local.GetStream(), token);
+                            await Wire.BridgeAsync(local.GetStream(), ssl, token, upload, download);
                         }
                         break;
                     default: throw new InvalidDataException("Неизвестная команда.");
@@ -281,7 +284,7 @@ public sealed class MeshNode : IAsyncDisposable
                 using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token); deadline.CancelAfter(TimeSpan.FromSeconds(10));
                 await Wire.WriteAsync(connection.Stream, new Request("torrent"), deadline.Token);
                 if (!(await Wire.ReadAsync<Response>(connection.Stream, deadline.Token)).Ok) return;
-                await Wire.BridgeAsync(client.GetStream(), connection.Stream, token);
+                await Wire.BridgeAsync(client.GetStream(), connection.Stream, token, upload, download);
             }
             catch (Exception e) when (e is IOException or SocketException or AuthenticationException or OperationCanceledException) { }
         }

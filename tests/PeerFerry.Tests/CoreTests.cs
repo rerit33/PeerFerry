@@ -159,12 +159,13 @@ public sealed class CoreTests(Xunit.Abstractions.ITestOutputHelper output)
             await c.RememberPeerAsync(a.Descriptor); await c.RememberPeerAsync(b.Descriptor);
             await c.RefreshAsync(); Assert.Equal(2, Assert.Single(c.Catalog()).Sources.Count);
             await c.Torrents.DownloadAsync(a.Torrents.Metadata(hash), hash);
-            await Task.Delay(1200); // Let the engine initialize its rate limiter before exposing peers.
+            var started = System.Diagnostics.Stopwatch.StartNew();
             await c.RefreshAsync();
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             await UntilAsync(() => c.Torrents.Snapshot()[0].Connections >= 2, timeout.Token);
             Assert.True(c.Torrents.Snapshot()[0].Progress < 100);
             await UntilAsync(() => c.Torrents.Snapshot()[0].Progress >= 100, timeout.Token);
+            Assert.True(started.Elapsed >= TimeSpan.FromSeconds(6), "Aggregate rate limit was bypassed.");
             var downloaded = Directory.GetFiles(sc.DownloadDirectory, "*.bin", SearchOption.AllDirectories).Single();
             Assert.Equal(SHA256.HashData(data), SHA256.HashData(await File.ReadAllBytesAsync(downloaded)));
         }

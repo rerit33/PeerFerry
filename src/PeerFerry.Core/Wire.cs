@@ -21,14 +21,25 @@ internal static class Wire
         var bytes = new byte[length]; await stream.ReadExactlyAsync(bytes, token);
         return JsonSerializer.Deserialize<T>(bytes, StateStore.Json) ?? throw new InvalidDataException("Пустое сообщение.");
     }
-    public static async Task BridgeAsync(Stream first, Stream second, CancellationToken token)
+    public static async Task BridgeAsync(Stream local, Stream remote, CancellationToken token, BandwidthLimiter upload, BandwidthLimiter download)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(token);
-        var outgoing = first.CopyToAsync(second, 128 * 1024, linked.Token);
-        var incoming = second.CopyToAsync(first, 128 * 1024, linked.Token);
+        var outgoing = CopyLimitedAsync(local, remote, upload, linked.Token);
+        var incoming = CopyLimitedAsync(remote, local, download, linked.Token);
         await Task.WhenAny(outgoing, incoming);
         await linked.CancelAsync();
         try { await Task.WhenAll(outgoing, incoming); } catch (OperationCanceledException) { }
+    }
+    private static async Task CopyLimitedAsync(Stream source, Stream destination, BandwidthLimiter limiter, CancellationToken token)
+    {
+        var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(128 * 1024);
+        try
+        {
+            int count;
+            while ((count = await source.ReadAsync(buffer.AsMemory(), token)) != 0)
+            { await limiter.WaitAsync(count, token); await destination.WriteAsync(buffer.AsMemory(0, count), token); }
+        }
+        finally { System.Buffers.ArrayPool<byte>.Shared.Return(buffer); }
     }
 }
 

@@ -36,6 +36,8 @@ Transfers are isolated by group ID. An adapter/settings restart saves progress, 
 
 Initial publication reuses the piece verification performed by TorrentCreator after checking source timestamps/lengths. It initializes a complete FastResume bitfield instead of reading the same large source twice. Downloaded files still undergo the engine's normal piece verification.
 
+Bandwidth limits are enforced by shared monotonic-clock limiters in the outer transport, across all torrent tunnels, from the first transferred bytes. Engine rate limits are disabled: MonoTorrent initializes them on a later logic tick, which otherwise permits an initial unthrottled burst.
+
 ## Updates
 
 Velopack handles packages and process replacement. GitHub Releases serves the update feed and packages over HTTPS. Auto-check downloads a package but requires an explicit restart action. Transfers stop cleanly before applying the update. Release trust is the configured GitHub repository; package hashes are integrity checks, not independent publisher authentication. Authenticode signing is not configured in this initial build.
