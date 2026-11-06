@@ -51,9 +51,9 @@ public partial class MainWindow
         VerifySettingsEditing();
         var link = new LinkWindow("Пригласить в PeerFerry", "Отправьте приглашение другу в вашей LAN/VPN-сети.", node.CreateInvitation(), true) { Owner = this, ShowInTaskbar = false }; link.Show(); await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle); RenderWindow(link, Path.Combine(directory, "invitation.png")); link.Close();
         var publication = transfers.Single(t => t.Snapshot.IsPublication);
-        ToggleTransfer(new Button { DataContext = publication }, new()); if (pendingOperation is not null) await pendingOperation; await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        await ToggleTransferAsync(publication);
         if (!publication.CanResume) throw new InvalidOperationException("UI smoke: кнопка паузы не остановила раздачу.");
-        ToggleTransfer(new Button { DataContext = publication }, new()); if (pendingOperation is not null) await pendingOperation; await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        await ToggleTransferAsync(publication);
         if (publication.CanResume) throw new InvalidOperationException("UI smoke: кнопка продолжения не запустила раздачу.");
         File.WriteAllText(Path.Combine(directory, "result.txt"), "PASS: запуск WPF, публикация, приглашение, предпросмотр до загрузки, загрузка с двух узлов, очередь, пауза, сохранение выбора, поиск, сворачивание, компактное окно и три раздела настроек."); forceExit = true; Close();
     }

@@ -266,7 +266,13 @@ public partial class MainWindow : Window
     private async void CatalogDoubleClick(object sender, MouseButtonEventArgs e) { if (e.OriginalSource is DependencyObject source && FindParent<DataGridRow>(source) is { DataContext: CatalogRow row } && FindParent<Button>(source) is null) await DownloadRowAsync(row); }
     private static T? FindParent<T>(DependencyObject child) where T : DependencyObject { for (var current = child; current is not null; current = VisualTreeHelper.GetParent(current)) if (current is T result) return result; return null; }
     private async void ToggleTransfer(object sender, RoutedEventArgs e)
-    { if (sender is Button { DataContext: TransferRow row }) { TransfersGrid.SelectedItem = row; await RunAsync("Изменение передачи…", () => row.CanResume ? node!.Torrents.ResumeAsync(row.Hash) : node!.Torrents.PauseAsync(row.Hash)); } }
+    { if (sender is Button { DataContext: TransferRow row }) await ToggleTransferAsync(row); }
+    private async Task ToggleTransferAsync(TransferRow row)
+    {
+        TransfersGrid.SelectedItem = row;
+        var resume = row.CanResume;
+        await RunAsync("Изменение передачи…", () => resume ? node!.Torrents.ResumeAsync(row.Hash) : node!.Torrents.PauseAsync(row.Hash));
+    }
     private async void RemoveTransfer(object sender, RoutedEventArgs e)
     { if (TransfersGrid.SelectedItem is TransferRow row) await RunAsync("Удаление передачи из списка…", () => node!.Torrents.RemoveAsync(row.Hash)); }
     private void OpenTransferFolder(object sender, RoutedEventArgs e) { if (sender is Button { DataContext: TransferRow row }) OpenFolder(row.Snapshot.Directory); }
