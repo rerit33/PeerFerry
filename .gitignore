@@ -1,0 +1,9 @@
+.work/
+**/bin/
+**/obj/
+dist/
+TestResults/
+*.user
+.vs/
+*.pfx
+*.nupkg
