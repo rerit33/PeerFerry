@@ -89,8 +89,8 @@ try {
         try {
             $events=Get-WinEvent -FilterHashtable @{LogName=$channel;StartTime=$start.AddMinutes(-10)} -ErrorAction Stop |
                 Where-Object { $_.Message -match 'PeerFerry' } | Select-Object -First 15 TimeCreated,Id,ProviderName,Message
-            Write-Report (($channel -replace '[^a-zA-Z0-9.-]','_') + '.txt') ($events | Format-List)
-        } catch { Write-Report (($channel -replace '[^a-zA-Z0-9.-]','_') + '.txt') 'Нет доступных событий PeerFerry.' }
+            Write-Report ('events-' + ($channel -replace '[^a-zA-Z0-9.-]','_') + '.txt') ($events | Format-List)
+        } catch { Write-Report ('events-' + ($channel -replace '[^a-zA-Z0-9.-]','_') + '.txt') 'Нет доступных событий PeerFerry.' }
     }
 } catch { Write-Report 'collector-error.txt' $_.Exception.ToString() }
 finally {

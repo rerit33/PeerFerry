@@ -20,6 +20,9 @@
     <StartupObject>PeerFerry.App.Program</StartupObject>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\PeerFerry.ico</ApplicationIcon>
+    <!-- Older Windows 10 builds fail inside CoreCLR before Main when the apphost opts into CET.
+         This per-executable compatibility setting leaves system exploit-protection policy untouched. -->
+    <CETCompat>false</CETCompat>
   </PropertyGroup>
 
   <ItemGroup><Resource Include="Assets\PeerFerry.ico" /></ItemGroup>

@@ -1,9 +1,9 @@
 # Релизы и обновления
 
-Первый публичный тестовый релиз — [0.2.1](https://github.com/rerit33/PeerFerry/releases/tag/v0.2.1). GitHub workflow на push/PR собирает и проверяет код. Ручной запуск Windows workflow дополнительно создаёт артефакты сборки, не публикуя Release автоматически.
+Публичные тестовые сборки публикуются в [GitHub Releases](https://github.com/rerit33/PeerFerry/releases). GitHub workflow на push/PR собирает и проверяет код. Ручной запуск Windows workflow дополнительно создаёт артефакты сборки, не публикуя Release автоматически.
 
 1. Обновить версию по умолчанию в `Directory.Build.props` и `scripts/build.ps1`.
-2. Выполнить `pwsh -File scripts/build.ps1 -Version 0.2.1`. Для нативного экрана установщика нужны MSVC x64 Build Tools и Windows SDK.
+2. Выполнить `pwsh -File scripts/build.ps1 -Version 0.2.2`. Для нативного экрана установщика нужны MSVC x64 Build Tools и Windows SDK. Сборка проверяет PE-флаг `CET_COMPAT` итогового apphost: он должен быть выключен для совместимости с затронутыми ранними сборками Windows 10; ASLR/DEP должны сохраняться.
 3. Проверить установщик/portable и сценарии из `TESTING.md`; сохранить SHA-256 и результаты.
 4. Для следующего релиза, чтобы получить delta-пакет, предварительно скачать предыдущие пакеты в `dist/releases` средствами `dotnet vpk download github` или собрать полный пакет без delta.
 5. Создать GitHub Release в `rerit33/PeerFerry`, приложить установщик, portable, `*-full.nupkg`, delta (если есть), `releases.win.json`, `assets.win.json`, `RELEASES`, `SHA256SUMS.txt`. Не загружать настройки/профили и `.work`.

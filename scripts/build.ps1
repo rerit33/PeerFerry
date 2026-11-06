@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$Version = '0.2.1', [switch]$SkipTests)
+param([string]$Version = '0.2.2', [switch]$SkipTests)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if ($Version -notmatch '^\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?$') { throw 'Expected a semantic version.' }
@@ -14,6 +14,7 @@ try {
     }
     dotnet publish src/PeerFerry.App -c Release -r win-x64 --self-contained true -o dist/publish "-p:Version=$Version" -p:DebugType=None -p:DebugSymbols=false
     if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }
+    & (Join-Path $PSScriptRoot 'test-apphost.ps1') -Executable dist/publish/PeerFerry.exe
     Copy-Item -LiteralPath LICENSE,THIRD-PARTY-NOTICES.md -Destination dist/publish
     dotnet tool restore
     if ($LASTEXITCODE -ne 0) { throw 'Tool restore failed.' }

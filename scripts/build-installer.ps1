@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$BackendPath, [Parameter(Mandatory)][string]$OutputPath, [string]$Version = '0.2.1', [string]$AppId = 'PeerFerry', [string]$Title = 'PeerFerry')
+param([Parameter(Mandatory)][string]$BackendPath, [Parameter(Mandatory)][string]$OutputPath, [string]$Version = '0.2.2', [string]$AppId = 'PeerFerry', [string]$Title = 'PeerFerry')
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $backend = (Resolve-Path -LiteralPath $BackendPath).Path

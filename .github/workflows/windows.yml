@@ -16,6 +16,7 @@ jobs:
           dotnet-version: '10.0.x'
       - run: dotnet restore PeerFerry.sln
       - run: dotnet build PeerFerry.sln -c Release --no-restore
+      - run: ./scripts/test-apphost.ps1 -Executable src/PeerFerry.App/bin/Release/net10.0-windows/PeerFerry.exe
       - run: dotnet test tests/PeerFerry.Tests -c Release --no-build --logger "trx;LogFileName=tests.trx"
       - run: ./scripts/test-ui.ps1 -NoBuild
       - run: ./scripts/test-installer.ps1
