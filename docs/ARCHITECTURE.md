@@ -36,7 +36,7 @@ Transfers are isolated by group ID. An adapter/settings restart saves progress, 
 
 Initial publication reuses the piece verification performed by TorrentCreator after checking source timestamps/lengths. It initializes a complete FastResume bitfield instead of reading the same large source twice. Downloaded files still undergo the engine's normal piece verification.
 
-Bandwidth limits are enforced by shared monotonic-clock limiters in the outer transport, across all torrent tunnels, from the first transferred bytes. Engine rate limits are disabled: MonoTorrent initializes them on a later logic tick, which otherwise permits an initial unthrottled burst.
+Bandwidth limits are enforced by shared monotonic-clock limiters in the outer transport, across all torrent tunnels, from the start of each transfer. They retain at most 50 ms of unused credit to compensate for timer granularity on small TLS records, with bounded short bursts and no reservations held by cancelled connections. Engine rate limits are disabled: MonoTorrent initializes them on a later logic tick, which otherwise permits an initial unthrottled burst.
 
 ## Updates
 

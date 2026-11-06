@@ -14,8 +14,10 @@ internal sealed class BandwidthLimiter(int kibibytesPerSecond)
         try
         {
             var now = Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
-            var deadline = Math.Max(next, now) + bytes / (double)bytesPerSecond;
-            await Task.Delay(TimeSpan.FromSeconds(deadline - now), token);
+            // Carry up to 50 ms of unused credit so timer granularity does not
+            // reduce the configured rate on small TLS records. Idle bursts stay bounded.
+            var deadline = Math.Max(next, now - 0.05) + bytes / (double)bytesPerSecond;
+            if (deadline > now) await Task.Delay(TimeSpan.FromSeconds(deadline - now), token);
             // Cancelled/paused connections do not reserve future bandwidth for other peers.
             next = deadline;
         }
