@@ -23,6 +23,7 @@ public sealed class MeshNode : IAsyncDisposable
     private readonly Func<IReadOnlyList<NetworkBinding>> bindingProvider;
     private readonly ConcurrentDictionary<string, PeerState> peers = new();
     private readonly ConcurrentDictionary<int, Task> connections = new();
+    private readonly ConcurrentDictionary<int, string> incomingTorrentPeers = new();
     private readonly CancellationTokenSource lifetime = new();
     private readonly SemaphoreSlim inboundSlots = new(48);
     private readonly SemaphoreSlim rebindLock = new(1);
@@ -170,9 +171,15 @@ public sealed class MeshNode : IAsyncDisposable
                         using (var local = new TcpClient())
                         {
                             await local.ConnectAsync(IPAddress.Loopback, Torrents.LocalPort, deadline.Token);
-                            await Wire.WriteAsync(ssl, new Response(true), deadline.Token);
-                            deadline.CancelAfter(Timeout.InfiniteTimeSpan);
-                            await Wire.BridgeAsync(local.GetStream(), ssl, token, upload, download);
+                            var localPort = ((IPEndPoint)local.Client.LocalEndPoint!).Port;
+                            incomingTorrentPeers[localPort] = remoteId;
+                            try
+                            {
+                                await Wire.WriteAsync(ssl, new Response(true), deadline.Token);
+                                deadline.CancelAfter(Timeout.InfiniteTimeSpan);
+                                await Wire.BridgeAsync(local.GetStream(), ssl, token, upload, download);
+                            }
+                            finally { incomingTorrentPeers.TryRemove(localPort, out _); }
                         }
                         break;
                     default: throw new InvalidDataException("Неизвестная команда.");
@@ -294,8 +301,37 @@ public sealed class MeshNode : IAsyncDisposable
         .Select(g => new RemoteShare(g.First().File, g.Select(p => p.Source).ToList())).OrderBy(f => f.Entry.Name).ToArray();
     public IReadOnlyList<PeerSnapshot> PeerSnapshots() => peers.Values.Select(p => new PeerSnapshot(p.Peer.Id, p.Peer.Name,
         string.Join(", ", p.Peer.Endpoints.Select(e => e.Address).Distinct()), p.Error == "" && DateTimeOffset.UtcNow - p.LastSeen < TimeSpan.FromSeconds(30), p.LastSeen, p.Error)).OrderBy(p => p.Name).ToArray();
-    public async Task DownloadAsync(RemoteShare share, CancellationToken token = default)
+    public IReadOnlyList<ShareParticipantSnapshot> CatalogParticipants(string hash)
     {
+        var result = new List<ShareParticipantSnapshot>();
+        foreach (var peer in peers.Values)
+        {
+            // Refresh/rebind can replace the catalog while the UI reads it.
+            var entry = peer.Catalog.FirstOrDefault(file => file.Hash == hash);
+            if (entry is not null) result.Add(new(peer.Peer.Id, peer.Peer.Name, 0, 0,
+                entry.Progress is >= 0 and <= 100 ? entry.Progress : null,
+                peer.Error == "" && DateTimeOffset.UtcNow - peer.LastSeen < TimeSpan.FromSeconds(30), false));
+        }
+        return result.OrderBy(p => p.Name).ToArray();
+    }
+    public async Task<IReadOnlyList<ShareParticipantSnapshot>> TransferParticipantsAsync(string hash)
+    {
+        var lookup = new Dictionary<int, string>();
+        foreach (var peer in peers.Values)
+        {
+            try { if (peer.Proxy?.LocalEndpoint is IPEndPoint endpoint) lookup[endpoint.Port] = peer.Peer.Id; }
+            catch (InvalidOperationException) { /* The selected adapter may have disappeared. */ }
+        }
+        foreach (var entry in incomingTorrentPeers) lookup[entry.Key] = entry.Value;
+        var result = CatalogParticipants(hash).ToDictionary(p => p.Id);
+        foreach (var group in (await Torrents.ConnectionsAsync(hash)).Where(c => lookup.ContainsKey(c.LocalPort)).GroupBy(c => lookup[c.LocalPort]))
+            if (peers.TryGetValue(group.Key, out var peer)) result[group.Key] = new(group.Key, peer.Peer.Name,
+                group.Sum(c => c.DownloadSpeed), group.Sum(c => c.UploadSpeed), group.Max(c => c.Progress), true, true);
+        return result.Values.OrderBy(p => p.Name).ToArray();
+    }
+    public async Task<byte[]> GetMetadataAsync(RemoteShare share, CancellationToken token = default)
+    {
+        Exception? lastFailure = null;
         foreach (var source in share.Sources)
         {
             try
@@ -304,11 +340,21 @@ public sealed class MeshNode : IAsyncDisposable
                 using var connection = await ConnectAsync(source, deadline.Token);
                 await Wire.WriteAsync(connection.Stream, new Request("metadata", share.Entry.Hash), deadline.Token);
                 var encoded = await Wire.ReadAsync<string>(connection.Stream, deadline.Token);
-                await Torrents.DownloadAsync(Convert.FromBase64String(encoded), share.Entry.Hash, token);
-                await RefreshAsync(token); return;
+                var bytes = Convert.FromBase64String(encoded);
+                var torrent = TorrentService.ValidateMetadata(bytes, Settings.GroupId);
+                if (TorrentService.Hash(torrent) != share.Entry.Hash || torrent.Size != share.Entry.Size || torrent.Files.Count != share.Entry.FileCount)
+                    throw new InvalidDataException("Метаданные не соответствуют каталогу.");
+                return bytes;
             }
-            catch (Exception e) when (e is IOException or SocketException or AuthenticationException) { if (source == share.Sources.Last()) throw; }
+            catch (Exception e) when (e is IOException or SocketException or AuthenticationException or FormatException or OperationCanceledException)
+            { if (token.IsCancellationRequested) throw; lastFailure = e; }
         }
+        throw new IOException("Не удалось получить содержимое раздачи. Проверьте подключение участников.", lastFailure);
+    }
+    public async Task DownloadAsync(RemoteShare share, CancellationToken token = default, byte[]? metadata = null)
+    {
+        await Torrents.DownloadAsync(metadata ?? await GetMetadataAsync(share, token), share.Entry.Hash, token);
+        await RefreshAsync(token);
     }
     private async Task MaintainAsync()
     {

@@ -29,6 +29,7 @@ public partial class App : System.Windows.Application
         DataDirectory = dataIndex >= 0 && dataIndex + 1 < e.Args.Length ? Path.GetFullPath(e.Args[dataIndex + 1]) : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PeerFerry");
         var smokeIndex = Array.IndexOf(e.Args, "--smoke-test");
         if (smokeIndex >= 0 && smokeIndex + 1 < e.Args.Length) SmokeDirectory = Path.GetFullPath(e.Args[smokeIndex + 1]);
+        if (SmokeDirectory is not null && dataIndex < 0) DataDirectory = Path.Combine(SmokeDirectory, "profile");
         Directory.CreateDirectory(DataDirectory);
         var suffix = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(DataDirectory.ToUpperInvariant())))[..24];
         mutex = new Mutex(true, "Local\\PeerFerry-" + suffix, out var created);
@@ -41,6 +42,7 @@ public partial class App : System.Windows.Application
         DispatcherUnhandledException += (_, args) =>
         {
             File.AppendAllText(Path.Combine(DataDirectory, "errors.log"), $"{DateTimeOffset.Now:O} {args.Exception}\n");
+            if (SmokeDirectory is not null) { args.Handled = true; Shutdown(1); return; }
             System.Windows.MessageBox.Show(args.Exception.Message, "PeerFerry", MessageBoxButton.OK, MessageBoxImage.Error); args.Handled = true;
         };
         MainWindow = new MainWindow(); MainWindow.Show();

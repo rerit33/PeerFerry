@@ -1,6 +1,8 @@
-# Architecture (0.1)
+# Architecture (0.2)
 
 `PeerFerry.App` is a native WPF client. `PeerFerry.Core` owns state, adapters, invitations, discovery, TLS transport and the torrent engine. `PeerFerry.Tests` exercises the real engine over local TCP/TLS rather than mocking file transfer.
+
+The light WPF theme implements the approved raster concepts in `docs/design/approved`. Main navigation has a remote catalog and a combined transfers list, with collapsible bottom details. Mutable rows retain identity across periodic updates. File details are loaded only when needed; selecting a remote share fetches validated metadata without adding a torrent or creating a download directory. Selection changes cancel metadata requests and discard stale results. MonoTorrent connection endpoints are mapped back to authenticated peer identities through outbound proxy ports and incoming bridge ports, allowing names and per-peer rates without exposing internal proxy addresses. Catalog progress is optional for compatibility with 0.1 peers; unknown availability is shown as unknown.
 
 ## Data flow
 

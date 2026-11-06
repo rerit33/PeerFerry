@@ -1,29 +1,41 @@
-<Window x:Class="PeerFerry.App.SettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Настройки — PeerFerry" Width="840" Height="700" MinWidth="760" MinHeight="600" WindowStartupLocation="CenterOwner">
-  <Grid Margin="22"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-    <TabControl>
-      <TabItem Header="Сеть"><Grid Margin="12"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-        <StackPanel><TextBlock Text="Имя участника"/><TextBox x:Name="NameBox" MaxLength="80" Margin="0,6,0,16"/>
-          <TextBlock Text="Где искать участников и передавать файлы"/><ComboBox x:Name="ModeBox" Margin="0,6,0,8" Padding="8" SelectionChanged="ModeChanged"><ComboBoxItem Tag="Auto" Content="Автоматически — ZeroTier и Radmin VPN"/><ComboBoxItem Tag="Manual" Content="Выбрать адаптеры вручную"/><ComboBoxItem Tag="All" Content="Все активные адаптеры"/></ComboBox>
-        </StackPanel>
-        <TextBlock Grid.Row="1" Text="Выбор ограничивает поиск и передачу. Если выбранный адаптер отключится, приложение будет ждать его восстановления." Style="{StaticResource Hint}" Margin="0,0,0,12"/>
-        <DataGrid x:Name="AdaptersGrid" Grid.Row="2" IsReadOnly="False" RowHeight="52"><DataGrid.Columns>
-          <DataGridTemplateColumn Width="45"><DataGridTemplateColumn.CellTemplate><DataTemplate><CheckBox IsChecked="{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" HorizontalAlignment="Center" VerticalAlignment="Center"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-          <DataGridTextColumn Header="Адаптер" Binding="{Binding Name}" Width="220" IsReadOnly="True"/><DataGridTextColumn Header="IPv4" Binding="{Binding Addresses}" Width="160" IsReadOnly="True"/><DataGridTextColumn Header="Описание" Binding="{Binding Description}" Width="*" IsReadOnly="True"/>
-        </DataGrid.Columns></DataGrid>
-        <StackPanel Grid.Row="3" Margin="0,14,0,0"><StackPanel Orientation="Horizontal"><TextBlock Text="Порт подключения" VerticalAlignment="Center" Margin="0,0,12,0"/><TextBox x:Name="PortBox" Width="95"/></StackPanel><TextBlock Text="По умолчанию: TCP 45831, поиск: UDP 45832. Брандмауэр должен разрешать входящие подключения PeerFerry для выбранной сети." Style="{StaticResource Hint}" Margin="0,8,0,0"/></StackPanel>
-      </Grid></TabItem>
-      <TabItem Header="Передачи"><StackPanel Margin="16"><TextBlock Text="Папка загрузок"/><DockPanel Margin="0,6,0,22"><Button Content="Выбрать…" DockPanel.Dock="Right" Click="BrowseDownloads" Margin="10,0,0,0"/><TextBox x:Name="DownloadBox"/></DockPanel>
-        <TextBlock Text="Ограничение приёма, КиБ/с (0 — без ограничения)"/><TextBox x:Name="DownloadLimitBox" Margin="0,6,0,16"/>
-        <TextBlock Text="Ограничение отдачи, КиБ/с (0 — без ограничения)"/><TextBox x:Name="UploadLimitBox" Margin="0,6,0,16"/>
-        <TextBlock Text="Одновременных загрузок (остальные ждут в очереди)"/><TextBox x:Name="ConcurrencyBox" Margin="0,6,0,16"/>
-        <TextBlock Text="Полученные файлы остаются на диске после удаления раздачи из списка. Передача папок не требует архива." Style="{StaticResource Hint}"/>
-      </StackPanel></TabItem>
-      <TabItem Header="Приложение"><StackPanel Margin="16"><CheckBox x:Name="TrayBox" Content="Сворачивать в трей при закрытии окна" Margin="0,0,0,18"/><CheckBox x:Name="UpdatesBox" Content="Автоматически проверять обновления" Margin="0,0,0,18"/>
-        <TextBlock Text="GitHub-репозиторий обновлений"/><TextBox x:Name="RepositoryBox" Margin="0,6,0,12"/><TextBlock Text="Обновление скачивается через обычное интернет-подключение. Перезапуск выполняется по вашей команде с сохранением передач." Style="{StaticResource Hint}"/>
-        <TextBlock Text="PeerFerry · MIT License" Margin="0,32,0,8" FontWeight="SemiBold"/><TextBlock Text="Приглашение даёт доступ к группе и её раздачам. Передавайте его только тем, кого хотите видеть в группе." Style="{StaticResource Hint}"/>
-      </StackPanel></TabItem>
+<Window x:Class="PeerFerry.App.SettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ui="clr-namespace:PeerFerry.App.Controls" Title="Настройки · PeerFerry" Width="960" Height="780" MinWidth="820" MinHeight="660" WindowStartupLocation="CenterOwner">
+  <Grid><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <TabControl x:Name="SettingsTabs">
+      <TabItem Header="Основные"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28,24,28,22">
+        <TextBlock Text="Участник" Style="{StaticResource SectionTitle}"/>
+        <TextBlock Text="Ваше имя" Margin="0,0,0,7"/><TextBox x:Name="NameBox" Width="420" HorizontalAlignment="Left" MaxLength="80" AutomationProperties.Name="Ваше имя"/><TextBlock Text="Это имя увидят другие участники группы." Style="{StaticResource Hint}" Margin="0,7,0,20"/>
+        <TextBlock Text="Загрузки" Style="{StaticResource SectionTitle}"/>
+        <TextBlock Text="Папка для новых загрузок" Margin="0,0,0,7"/><DockPanel><Button DockPanel.Dock="Right" Content="Изменить…" Click="BrowseDownloads" Margin="12,0,0,0"/><TextBox x:Name="DownloadBox" AutomationProperties.Name="Папка для новых загрузок"/></DockPanel>
+        <TextBlock Text="Файлы сохраняются сюда без дополнительного запроса. Смена папки применяется только к новым загрузкам." Style="{StaticResource Hint}" Margin="0,7,0,20"/>
+        <TextBlock Text="Поведение окна" Style="{StaticResource SectionTitle}"/><CheckBox x:Name="TrayBox" Content="При закрытии сворачивать в область уведомлений"/><TextBlock Text="Передачи продолжаются в фоне. Для выхода используйте меню значка PeerFerry." Style="{StaticResource Hint}" Margin="27,0,0,20"/>
+        <TextBlock Text="Обновления" Style="{StaticResource SectionTitle}"/><CheckBox x:Name="UpdatesBox" Content="Автоматически проверять обновления"/>
+        <StackPanel Orientation="Horizontal" Margin="0,8,0,4"><Button x:Name="CheckUpdateButton" Content="Проверить сейчас" Click="CheckUpdates"/><TextBlock x:Name="VersionLabel" Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="16,0,0,0"/></StackPanel>
+        <TextBlock x:Name="UpdateStatus" Style="{StaticResource Hint}"/>
+        <Expander Header="Источник обновлений" Margin="0,10,0,0"><StackPanel Margin="22,10,0,0"><TextBlock Text="GitHub-репозиторий" Margin="0,0,0,6"/><TextBox x:Name="RepositoryBox" AutomationProperties.Name="GitHub-репозиторий"/><TextBlock Text="Изменённый источник будет использован после сохранения настроек." Style="{StaticResource Hint}" Margin="0,7,0,0"/></StackPanel></Expander>
+      </StackPanel></ScrollViewer></TabItem>
+      <TabItem Header="Передачи"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28,26">
+        <TextBlock Text="Скорость передачи" Style="{StaticResource SectionTitle}"/>
+        <TextBlock Text="Ограничения действуют на все передачи приложения вместе." Style="{StaticResource Hint}" Margin="0,0,0,18"/>
+        <CheckBox x:Name="DownloadLimitEnabled" Content="Ограничить скорость приёма" Checked="LimitsChanged" Unchecked="LimitsChanged"/><StackPanel Orientation="Horizontal" Margin="27,5,0,0"><TextBox x:Name="DownloadLimitBox" Width="150" IsEnabled="{Binding IsChecked, ElementName=DownloadLimitEnabled}" TextChanged="LimitsChanged" AutomationProperties.Name="Лимит приёма"/><TextBlock Text="КиБ/с" Margin="12,0,0,0" VerticalAlignment="Center"/></StackPanel><TextBlock x:Name="DownloadHint" Style="{StaticResource Hint}" Margin="27,7,0,22"/>
+        <CheckBox x:Name="UploadLimitEnabled" Content="Ограничить скорость отдачи" Checked="LimitsChanged" Unchecked="LimitsChanged"/><StackPanel Orientation="Horizontal" Margin="27,5,0,0"><TextBox x:Name="UploadLimitBox" Width="150" IsEnabled="{Binding IsChecked, ElementName=UploadLimitEnabled}" TextChanged="LimitsChanged" AutomationProperties.Name="Лимит отдачи"/><TextBlock Text="КиБ/с" Margin="12,0,0,0" VerticalAlignment="Center"/></StackPanel><TextBlock x:Name="UploadHint" Style="{StaticResource Hint}" Margin="27,7,0,26"/>
+        <Border BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Margin="0,0,0,24"/>
+        <TextBlock Text="Очередь загрузок" Style="{StaticResource SectionTitle}"/><TextBlock Text="Одновременных загрузок" Margin="0,0,0,10"/><StackPanel Orientation="Horizontal"><Button Content="−" Width="36" Tag="-1" Click="StepConcurrency" AutomationProperties.Name="Уменьшить число загрузок"/><TextBox x:Name="ConcurrencyBox" Width="68" TextAlignment="Center" Margin="6,0" AutomationProperties.Name="Одновременных загрузок"/><Button Content="+" Width="36" Tag="1" Click="StepConcurrency" AutomationProperties.Name="Увеличить число загрузок"/></StackPanel>
+        <TextBlock Text="Остальные загрузки будут ожидать в очереди." Style="{StaticResource Hint}" Margin="0,10,0,26"/>
+        <Border Background="#F4F8F4" BorderBrush="#DCE7DC" BorderThickness="1" CornerRadius="4" Padding="18"><StackPanel><TextBlock Text="Загруженные части автоматически раздаются другим участникам группы." TextWrapping="Wrap"/><TextBlock Text="Удаление передачи из списка оставляет файлы на диске." Style="{StaticResource Hint}" Margin="0,8,0,0"/></StackPanel></Border>
+      </StackPanel></ScrollViewer></TabItem>
+      <TabItem Header="Сеть"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="28,24">
+        <TextBlock Text="Сетевые адаптеры" Style="{StaticResource SectionTitle}"/><TextBlock Text="Выберите, в каких сетях искать участников и передавать файлы." Style="{StaticResource Hint}" Margin="0,0,0,12"/>
+        <RadioButton x:Name="AutoMode" GroupName="NetworkMode" Content="Автоматически — ZeroTier и Radmin VPN" Checked="ModeChanged"/><RadioButton x:Name="ManualMode" GroupName="NetworkMode" Content="Выбрать адаптеры вручную" Checked="ModeChanged"/><RadioButton x:Name="AllMode" GroupName="NetworkMode" Content="Все активные адаптеры" Checked="ModeChanged"/>
+        <Border BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="4" Margin="0,14,0,0"><DataGrid x:Name="AdaptersGrid" IsReadOnly="False" RowHeight="43" MinHeight="130" MaxHeight="230" SelectionMode="Single"><DataGrid.Columns>
+          <DataGridTemplateColumn Width="50"><DataGridTemplateColumn.CellTemplate><DataTemplate><CheckBox IsChecked="{Binding Selected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding Manual}" Margin="0" AutomationProperties.Name="{Binding Name}"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+          <DataGridTemplateColumn Header="Адаптер" Width="*" IsReadOnly="True"><DataGridTemplateColumn.CellTemplate><DataTemplate><StackPanel Orientation="Horizontal"><ui:AppIcon Kind="{Binding Icon}" Foreground="{StaticResource Muted}" Margin="0,0,12,0"/><TextBlock Text="{Binding Name}" ToolTip="{Binding Description}"/></StackPanel></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
+          <DataGridTextColumn Header="IPv4" Binding="{Binding Addresses}" Width="250" IsReadOnly="True"/>
+        </DataGrid.Columns></DataGrid></Border>
+        <TextBlock x:Name="AdapterHint" Style="{StaticResource Hint}" Margin="0,10,0,16"/>
+        <Border Background="#F4F8F4" BorderBrush="#DCE7DC" BorderThickness="1" CornerRadius="4" Padding="15"><TextBlock Text="Если выбранная сеть пропадёт, PeerFerry дождётся её восстановления и возобновит подключение." Style="{StaticResource Hint}"/></Border>
+        <Expander Header="Дополнительно" Margin="0,16,0,0"><StackPanel Margin="23,12,0,0"><StackPanel Orientation="Horizontal"><TextBlock Text="Порт подключения" VerticalAlignment="Center" Margin="0,0,18,0"/><TextBox x:Name="PortBox" Width="115" AutomationProperties.Name="Порт подключения"/></StackPanel><TextBlock Text="Обнаружение участников: UDP 45832. Разрешите PeerFerry в брандмауэре Windows для выбранных сетей." Style="{StaticResource Hint}" Margin="0,10,0,0"/></StackPanel></Expander>
+      </StackPanel></ScrollViewer></TabItem>
     </TabControl>
-    <DockPanel Grid.Row="1" Margin="0,18,0,0"><StackPanel Orientation="Horizontal" DockPanel.Dock="Right"><Button Content="Сохранить" Click="Save" IsDefault="True"/><Button Content="Отмена" IsCancel="True" Margin="0"/></StackPanel><TextBlock x:Name="ErrorLabel" Foreground="#B42318" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0"/></DockPanel>
+    <Border Grid.Row="1" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Background="#FAFBFA" Padding="24,16"><DockPanel><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="Сохранить" IsDefault="True" Click="Save" Style="{StaticResource Primary}" MinWidth="120" Margin="0,0,12,0"/><Button Content="Отмена" IsCancel="True" MinWidth="100"/></StackPanel><TextBlock x:Name="ErrorLabel" Foreground="#AD2929" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,20,0"/></DockPanel></Border>
   </Grid>
 </Window>

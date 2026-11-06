@@ -85,7 +85,7 @@ public sealed class TorrentService : IAsyncDisposable
             // publication a second time solely to tell the engine it is already complete.
             await manager.LoadFastResumeAsync(new FastResume(torrent.InfoHashes,
                 new BitField(torrent.PieceCount).SetAll(true), new BitField(torrent.PieceCount)));
-        managers[hash] = manager; lock (settings) settings.Shares.Add(record);
+            managers[hash] = manager; lock (settings) settings.Shares.Add(record);
             await store.SaveAsync(settings);
             await manager.StartAsync();
             return hash;
@@ -165,7 +165,7 @@ public sealed class TorrentService : IAsyncDisposable
             if (SourceChanged(record)) { await PauseAsync(record.Hash); Notice?.Invoke($"Исходный файл изменён: {record.Name}. Раздача приостановлена."); }
     }
     public List<CatalogEntry> Catalog(string id, string name) => managers.Values.Where(m => m.State is not (TorrentState.Stopped or TorrentState.Paused or TorrentState.Error))
-        .Select(m => new CatalogEntry(Hash(m.Torrent!), m.Name, m.Torrent!.Size, m.Files.Count, id, name)).Take(1000).ToList();
+        .Select(m => new CatalogEntry(Hash(m.Torrent!), m.Name, m.Torrent!.Size, m.Files.Count, id, name, m.Progress)).Take(1000).ToList();
     public byte[] Metadata(string hash)
     {
         if (!managers.TryGetValue(hash, out var manager) || manager.State is TorrentState.Stopped or TorrentState.Paused or TorrentState.Error)
@@ -180,8 +180,39 @@ public sealed class TorrentService : IAsyncDisposable
     {
         var m = p.Value; if (!records.TryGetValue(p.Key, out var record)) return null;
         return new TransferSnapshot(p.Key, m.Name, m.Torrent!.Size, m.Progress, m.Monitor.DownloadRate, m.Monitor.UploadRate,
-            m.OpenConnections, m.State == TorrentState.Stopped && !record.Paused ? "Queued" : m.State.ToString(), m.ContainingDirectory, record.IsPublication);
+            m.OpenConnections, m.State == TorrentState.Stopped && !record.Paused ? "Queued" : m.State.ToString(), m.ContainingDirectory, record.IsPublication,
+            CompletedBytes(m), m.Files.Count);
     }).OfType<TransferSnapshot>().OrderBy(s => s.Name).ToArray();
+    }
+    private static long CompletedBytes(TorrentManager manager)
+    {
+        var torrent = manager.Torrent!;
+        var bytes = (long)manager.Bitfield.TrueCount * torrent.PieceLength;
+        if (manager.Bitfield.Length > 0 && manager.Bitfield[manager.Bitfield.Length - 1])
+            bytes -= (long)torrent.PieceCount * torrent.PieceLength - torrent.Size;
+        return Math.Clamp(bytes, 0, torrent.Size);
+    }
+    public IReadOnlyList<ShareFileSnapshot> Files(string hash)
+    {
+        if (!managers.TryGetValue(hash, out var manager)) return [];
+        var pieceLength = manager.Torrent!.PieceLength;
+        return manager.Files.Select(file =>
+        {
+            long verified = 0;
+            for (var index = file.StartPieceIndex; index <= file.EndPieceIndex; index++)
+                if (manager.Bitfield[index])
+                    verified += Math.Max(0, Math.Min(file.OffsetInTorrent + file.Length, (long)(index + 1) * pieceLength) - Math.Max(file.OffsetInTorrent, (long)index * pieceLength));
+            return new ShareFileSnapshot(file.Path, file.Length, file.Length == 0 ? 100 : Math.Clamp(verified * 100.0 / file.Length, 0, 100));
+        }).ToArray();
+    }
+    public static IReadOnlyList<ShareFileSnapshot> DescribeMetadata(byte[] bytes, string groupId) => ValidateMetadata(bytes, groupId).Files
+        .Select(file => new ShareFileSnapshot(file.Path, file.Length, null)).ToArray();
+    public async Task<IReadOnlyList<TorrentConnectionSnapshot>> ConnectionsAsync(string hash)
+    {
+        if (!managers.TryGetValue(hash, out var manager)) return [];
+        try { return (await manager.GetPeersAsync()).Where(peer => peer.IsConnected).Select(peer =>
+            new TorrentConnectionSnapshot(peer.Uri.Port, peer.Monitor.DownloadRate, peer.Monitor.UploadRate, peer.BitField.PercentComplete)).ToArray(); }
+        catch (InvalidOperationException) { return []; }
     }
     private async Task TryStartAsync(TorrentManager manager, ShareRecord record)
     {

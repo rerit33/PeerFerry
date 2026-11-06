@@ -26,7 +26,7 @@ public sealed class AppSettings
 public sealed record PeerEndpoint(string Address, int Port);
 public sealed record PeerDescriptor(string Id, string Name, List<PeerEndpoint> Endpoints);
 public sealed record Invitation(int Version, string GroupName, string GroupKey, PeerDescriptor Peer);
-public sealed record CatalogEntry(string Hash, string Name, long Size, int FileCount, string OwnerId, string OwnerName);
+public sealed record CatalogEntry(string Hash, string Name, long Size, int FileCount, string OwnerId, string OwnerName, double? Progress = null);
 public sealed record RemoteShare(CatalogEntry Entry, List<PeerDescriptor> Sources);
 public sealed record SourceStamp(string Path, long Length, long ModifiedTicks);
 
@@ -43,7 +43,13 @@ public sealed class ShareRecord
 }
 
 public sealed record TransferSnapshot(string Hash, string Name, long Size, double Progress,
-    long DownloadSpeed, long UploadSpeed, int Connections, string State, string Directory, bool IsPublication);
+    long DownloadSpeed, long UploadSpeed, int Connections, string State, string Directory, bool IsPublication,
+    long CompletedBytes = 0, int FileCount = 1);
+
+public sealed record ShareFileSnapshot(string Path, long Size, double? Progress);
+public sealed record TorrentConnectionSnapshot(int LocalPort, long DownloadSpeed, long UploadSpeed, double Progress);
+public sealed record ShareParticipantSnapshot(string Id, string Name, long DownloadSpeed, long UploadSpeed,
+    double? Progress, bool Online, bool Connected);
 
 public sealed record PeerSnapshot(string Id, string Name, string Addresses, bool Online, DateTimeOffset LastSeen, string Error);
 

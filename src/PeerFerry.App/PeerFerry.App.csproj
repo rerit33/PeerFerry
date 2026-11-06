@@ -19,6 +19,9 @@
     <RootNamespace>PeerFerry.App</RootNamespace>
     <StartupObject>PeerFerry.App.Program</StartupObject>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\PeerFerry.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup><Resource Include="Assets\PeerFerry.ico" /></ItemGroup>
 
 </Project>

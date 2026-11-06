@@ -14,7 +14,7 @@ internal sealed class UpdateService(string repository)
         available = await manager.CheckForUpdatesAsync();
         if (available is null) return "Установлена актуальная версия PeerFerry.";
         await manager.DownloadUpdatesAsync(available, progress);
-        return "Обновление скачано. Нажмите «Обновления», чтобы перезапустить приложение.";
+        return "Обновление скачано. В настройках нажмите «Установить и перезапустить», чтобы применить его.";
     }
     public void ApplyAndRestart() => manager.ApplyUpdatesAndRestart(manager.UpdatePendingRestart);
 }

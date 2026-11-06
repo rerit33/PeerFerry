@@ -76,8 +76,21 @@ public sealed class CoreTests(Xunit.Abstractions.ITestOutputHelper output)
             await b.RememberPeerAsync(Invitations.Decode(a.CreateInvitation()).Peer);
             await b.RefreshAsync(timeout.Token);
             Assert.True(b.PeerSnapshots().Any(p => p.Online), string.Join("; ", b.PeerSnapshots().Select(p => p.Error)));
-            await b.DownloadAsync(Assert.Single(b.Catalog()), timeout.Token);
+            var remote = Assert.Single(b.Catalog());
+            var preview = await b.GetMetadataAsync(remote, timeout.Token);
+            var previewFile = Assert.Single(TorrentService.DescribeMetadata(preview, firstSettings.GroupId));
+            Assert.Equal(data.Length, previewFile.Size); Assert.Null(previewFile.Progress);
+            Assert.Empty(b.Torrents.Snapshot()); Assert.False(Directory.Exists(secondSettings.DownloadDirectory));
+            Assert.Equal("a", Assert.Single(b.CatalogParticipants(hash)).Name);
+            await b.DownloadAsync(remote, timeout.Token, preview);
             await UntilAsync(() => b.Torrents.Snapshot().Any(s => s.Progress is > 5 and < 100), timeout.Token);
+            var partial = Assert.Single(b.Torrents.Snapshot());
+            Assert.InRange(partial.CompletedBytes, 1, data.Length - 1);
+            Assert.InRange(Assert.Single(b.Torrents.Files(hash)).Progress!.Value, 1, 99.99);
+            var participant = Assert.Single(await b.TransferParticipantsAsync(hash), p => p.Connected);
+            Assert.Equal(a.Id, participant.Id); Assert.Equal("a", participant.Name); Assert.Equal(100, participant.Progress);
+            var inbound = Assert.Single(await a.TransferParticipantsAsync(hash), p => p.Connected);
+            Assert.Equal(b.Id, inbound.Id); Assert.Equal("b", inbound.Name);
             await b.DisposeAsync(); b = null;
             var restoredStore = new StateStore(Path.Combine(root, "b"));
             b = new MeshNode(restoredStore, restoredStore.Load(), TestBindings, false);
@@ -85,6 +98,7 @@ public sealed class CoreTests(Xunit.Abstractions.ITestOutputHelper output)
             Assert.Single(b.Torrents.Snapshot());
             Assert.True(b.Torrents.Snapshot()[0].Progress > 0);
             await UntilAsync(() => b.Torrents.Snapshot()[0].Progress >= 100, timeout.Token);
+            Assert.Equal(data.Length, b.Torrents.Snapshot()[0].CompletedBytes);
             var secondPath = Directory.GetFiles(secondSettings.DownloadDirectory, "*.bin", SearchOption.AllDirectories).Single();
             Assert.Equal(SHA256.HashData(data), SHA256.HashData(await File.ReadAllBytesAsync(secondPath, timeout.Token)));
             await a.DisposeAsync(); a = null;
@@ -128,6 +142,10 @@ public sealed class CoreTests(Xunit.Abstractions.ITestOutputHelper output)
             await using var a = new MeshNode(new StateStore(Path.Combine(root, "a")), sa, () => selected, false);
             await using var b = Node(root, "b", sb); await a.StartAsync(); await b.StartAsync();
             var hash = await a.Torrents.PublishAsync(folder);
+            var sourceFiles = a.Torrents.Files(hash);
+            Assert.Equal(3, sourceFiles.Count); Assert.All(sourceFiles, f => Assert.Equal(100, f.Progress));
+            Assert.Contains(sourceFiles, f => f.Path.Replace('\\', '/').EndsWith("Вложенная/Текст.txt"));
+            Assert.Equal(sourceFiles.Sum(f => f.Size), Assert.Single(a.Torrents.Snapshot()).CompletedBytes);
             // The first endpoint is reachable but has the wrong certificate; the next endpoint must work.
             await b.RememberPeerAsync(a.Descriptor with { Endpoints = b.Descriptor.Endpoints.Concat(a.Descriptor.Endpoints).ToList() });
             await b.RefreshAsync(); Assert.True(Assert.Single(b.PeerSnapshots()).Online);
@@ -139,6 +157,7 @@ public sealed class CoreTests(Xunit.Abstractions.ITestOutputHelper output)
             await UntilAsync(() => b.Torrents.Snapshot()[0].Progress >= 100, timeout.Token);
             var downloaded = Directory.GetFiles(sb.DownloadDirectory, "*", SearchOption.AllDirectories);
             Assert.Equal(3, downloaded.Length);
+            Assert.All(b.Torrents.Files(hash), f => Assert.Equal(100, f.Progress));
             Assert.Equal("Проверка вложенной папки", await File.ReadAllTextAsync(downloaded.Single(p => p.EndsWith("Текст.txt"))));
             await a.Torrents.PauseAsync(hash); Assert.Empty(a.Torrents.Catalog(a.Id, "a"));
             await a.Torrents.ResumeAsync(hash); await a.Torrents.RemoveAsync(hash); Assert.True(Directory.Exists(folder));

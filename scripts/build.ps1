@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$Version = '0.1.0', [switch]$SkipTests)
+param([string]$Version = '0.2.0', [switch]$SkipTests)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 if ($Version -notmatch '^\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?$') { throw 'Expected a semantic version.' }

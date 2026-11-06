@@ -17,11 +17,17 @@ jobs:
       - run: dotnet restore PeerFerry.sln
       - run: dotnet build PeerFerry.sln -c Release --no-restore
       - run: dotnet test tests/PeerFerry.Tests -c Release --no-build --logger "trx;LogFileName=tests.trx"
+      - run: ./scripts/test-ui.ps1 -NoBuild
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: test-results
           path: tests/PeerFerry.Tests/TestResults
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: ui-screenshots
+          path: .work/ui-test-*/screenshots/*
   package:
     if: github.event_name == 'workflow_dispatch'
     needs: verify
