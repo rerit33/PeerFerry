@@ -101,14 +101,19 @@ public sealed class CoreTests(Xunit.Abstractions.ITestOutputHelper output)
             Assert.Single(b.Torrents.Snapshot());
             Assert.True(b.Torrents.Snapshot()[0].Progress > 0);
             await UntilAsync(() => b.Torrents.Snapshot()[0].Progress >= 100, timeout.Token);
+            // 100% means all pieces are verified; the engine closes its writers asynchronously.
+            // Stop before reading externally so SHA-256 verifies the flushed files on disk.
+            await b.Torrents.PauseAsync(hash);
             Assert.Equal(data.Length, b.Torrents.Snapshot()[0].CompletedBytes);
             var secondPath = Directory.GetFiles(secondSettings.DownloadDirectory, "*.bin", SearchOption.AllDirectories).Single();
             Assert.Equal(SHA256.HashData(data), SHA256.HashData(await File.ReadAllBytesAsync(secondPath, timeout.Token)));
+            await b.Torrents.ResumeAsync(hash);
             await a.DisposeAsync(); a = null;
             c = Node(root, "c", thirdSettings); await c.StartAsync();
             await c.RememberPeerAsync(b.Descriptor); await c.RefreshAsync(timeout.Token);
             await c.DownloadAsync(Assert.Single(c.Catalog()), timeout.Token);
             await UntilAsync(() => c.Torrents.Snapshot()[0].Progress >= 100, timeout.Token);
+            await c.Torrents.PauseAsync(hash);
             var thirdPath = Directory.GetFiles(thirdSettings.DownloadDirectory, "*.bin", SearchOption.AllDirectories).Single();
             Assert.Equal(SHA256.HashData(data), SHA256.HashData(await File.ReadAllBytesAsync(thirdPath, timeout.Token)));
         }
@@ -158,6 +163,7 @@ public sealed class CoreTests(Xunit.Abstractions.ITestOutputHelper output)
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             await b.DownloadAsync(Assert.Single(b.Catalog()), timeout.Token);
             await UntilAsync(() => b.Torrents.Snapshot()[0].Progress >= 100, timeout.Token);
+            await b.Torrents.PauseAsync(hash);
             var downloaded = Directory.GetFiles(sb.DownloadDirectory, "*", SearchOption.AllDirectories);
             Assert.Equal(3, downloaded.Length);
             Assert.All(b.Torrents.Files(hash), f => Assert.Equal(100, f.Progress));
@@ -188,6 +194,7 @@ public sealed class CoreTests(Xunit.Abstractions.ITestOutputHelper output)
             Assert.True(c.Torrents.Snapshot()[0].Progress < 100);
             await UntilAsync(() => c.Torrents.Snapshot()[0].Progress >= 100, timeout.Token);
             Assert.True(started.Elapsed >= TimeSpan.FromSeconds(6), "Aggregate rate limit was bypassed.");
+            await c.Torrents.PauseAsync(hash);
             var downloaded = Directory.GetFiles(sc.DownloadDirectory, "*.bin", SearchOption.AllDirectories).Single();
             Assert.Equal(SHA256.HashData(data), SHA256.HashData(await File.ReadAllBytesAsync(downloaded)));
         }
