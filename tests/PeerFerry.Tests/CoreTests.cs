@@ -26,6 +26,9 @@ public sealed class CoreTests(Xunit.Abstractions.ITestOutputHelper output)
         NetworkBinding[] available = [new("vpn", "ZeroTier", "", IPAddress.Parse("10.2.0.1"), 24, 1, true),
             new("work", "Рабочий VPN", "", IPAddress.Parse("10.3.0.1"), 24, 2, false)];
         var settings = new AppSettings();
+        Assert.Equal("All", settings.NetworkMode);
+        Assert.Equal(2, NetworkAdapters.Select(settings, available).Count);
+        settings.NetworkMode = "Auto";
         Assert.Single(NetworkAdapters.Select(settings, available));
         settings.NetworkMode = "Manual"; settings.AdapterIds = ["missing"];
         Assert.Empty(NetworkAdapters.Select(settings, available));

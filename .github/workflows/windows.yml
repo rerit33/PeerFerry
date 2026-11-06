@@ -18,6 +18,7 @@ jobs:
       - run: dotnet build PeerFerry.sln -c Release --no-restore
       - run: dotnet test tests/PeerFerry.Tests -c Release --no-build --logger "trx;LogFileName=tests.trx"
       - run: ./scripts/test-ui.ps1 -NoBuild
+      - run: ./scripts/test-installer.ps1
       - uses: actions/upload-artifact@v7
         if: always()
         with:
@@ -28,6 +29,14 @@ jobs:
         with:
           name: ui-screenshots
           path: .work/ui-test-*/screenshots/*
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: installer-checks
+          path: |
+            .work/installer-test-*/installer.png
+            .work/installer-test-*/result.txt
+            .work/installer-test-*/update-result.json
   package:
     if: github.event_name == 'workflow_dispatch'
     needs: verify

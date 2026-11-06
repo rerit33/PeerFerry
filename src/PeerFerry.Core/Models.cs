@@ -8,7 +8,7 @@ public sealed class AppSettings
     public string DisplayName { get; set; } = Environment.MachineName;
     public string GroupName { get; set; } = "Друзья";
     public string GroupKey { get; set; } = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
-    public string NetworkMode { get; set; } = "Auto";
+    public string NetworkMode { get; set; } = "All";
     public List<string> AdapterIds { get; set; } = [];
     public int Port { get; set; } = 45831;
     public string DownloadDirectory { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "PeerFerry");
