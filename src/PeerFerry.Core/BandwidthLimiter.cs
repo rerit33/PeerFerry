@@ -4,19 +4,21 @@ namespace PeerFerry.Core;
 
 internal sealed class BandwidthLimiter(int kibibytesPerSecond)
 {
-    private readonly object gate = new();
+    private readonly SemaphoreSlim gate = new(1);
     private readonly long bytesPerSecond = (long)kibibytesPerSecond * 1024;
     private double next;
-    public ValueTask WaitAsync(int bytes, CancellationToken token)
+    public async ValueTask WaitAsync(int bytes, CancellationToken token)
     {
-        if (bytesPerSecond == 0) return ValueTask.CompletedTask;
-        double delay;
-        lock (gate)
+        if (bytesPerSecond == 0) return;
+        await gate.WaitAsync(token);
+        try
         {
             var now = Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
-            next = Math.Max(next, now) + bytes / (double)bytesPerSecond;
-            delay = next - now;
+            var deadline = Math.Max(next, now) + bytes / (double)bytesPerSecond;
+            await Task.Delay(TimeSpan.FromSeconds(deadline - now), token);
+            // Cancelled/paused connections do not reserve future bandwidth for other peers.
+            next = deadline;
         }
-        return new(Task.Delay(TimeSpan.FromSeconds(delay), token));
+        finally { gate.Release(); }
     }
 }
