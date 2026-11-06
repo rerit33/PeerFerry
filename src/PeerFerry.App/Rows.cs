@@ -7,11 +7,11 @@ internal static class Display
 {
     public static string Size(long bytes)
     {
-        string[] units = ["Б", "КиБ", "МиБ", "ГиБ", "ТиБ"]; double value = bytes; var i = 0;
+        string[] units = ["B", "KB", "MB", "GB", "TB"]; double value = bytes; var i = 0;
         while (value >= 1024 && i < units.Length - 1) { value /= 1024; i++; }
         return $"{value:0.#} {units[i]}";
     }
-    public static string Rate(long value) => value > 0 ? Size(value) + "/с" : "—";
+    public static string Rate(long value) => value > 0 ? Size(value) + "/s" : "—";
     public static string Percent(double? value) => value is null ? "—" : $"{value:0.#}%";
     public static string Icon(string name, int count = 1) => count > 1 ? "Folder" : Path.GetExtension(name).ToLowerInvariant() switch { ".zip" or ".7z" or ".rar" => "Archive", ".mp4" or ".mkv" or ".avi" => "Video", "" => "Folder", _ => "File" };
     public static string State(string state) => state switch

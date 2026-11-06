@@ -59,7 +59,7 @@ public partial class SettingsWindow : Window
     private void LimitsChanged(object sender, RoutedEventArgs e)
     {
         if (DownloadHint is null || UploadHint is null) return;
-        static string Hint(bool enabled, string text) => !enabled ? "Без ограничения" : int.TryParse(text, out var value) && value > 0 ? $"≈ {value / 1024.0:0.##} МиБ/с" : "Введите целое число больше нуля.";
+        static string Hint(bool enabled, string text) => !enabled ? "Без ограничения" : int.TryParse(text, out var value) && value > 0 ? $"≈ {value / 1024.0:0.##} MB/s" : "Введите целое число больше нуля.";
         DownloadHint.Text = Hint(DownloadLimitEnabled.IsChecked == true, DownloadLimitBox.Text); UploadHint.Text = Hint(UploadLimitEnabled.IsChecked == true, UploadLimitBox.Text);
     }
     private void StepConcurrency(object sender, RoutedEventArgs e) { if (sender is Button button) { _ = int.TryParse(ConcurrencyBox.Text, out var value); ConcurrencyBox.Text = Math.Clamp(value + int.Parse((string)button.Tag), 1, 20).ToString(); } }
